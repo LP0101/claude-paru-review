@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Read the diff from stdin (paru pipes it here as a pager)
+CONTENT=$(cat)
+
+if [[ -z "$CONTENT" ]]; then
+    exit 0
+fi
+
+# Display visually first
+if command -v bat &>/dev/null; then
+    echo "$CONTENT" | bat --language=diff --paging=always
+else
+    echo "$CONTENT" | less -R
+fi
+
+# Claude security analysis
+echo ""
+echo "── Claude Security Review ──────────────────────────────────────────────────"
+
+if ! command -v claude &>/dev/null; then
+    echo "  [skipped: claude CLI not found in PATH]"
+    echo "────────────────────────────────────────────────────────────────────────────"
+    exit 0
+fi
+
+PROMPT="You are reviewing a PKGBUILD diff for an Arch Linux AUR package before it is built and installed on the user's system.
+
+Analyse the diff below for security concerns:
+- Changed or new source URLs / checksums
+- New or modified install hooks (install=, prepare(), build(), package())
+- Obfuscated or encoded commands (base64, eval, curl|sh, etc.)
+- Unexpected network calls
+- New sudo/privilege escalation
+- Anything that looks covertly added vs a routine version bump
+
+Lead your response with one of: SAFE / SUSPICIOUS / DANGEROUS
+Then give a concise explanation (2-5 lines). If SUSPICIOUS or DANGEROUS, quote the specific lines.
+
+Diff:
+${CONTENT}"
+
+claude --dangerously-skip-permissions -p "$PROMPT" 2>/dev/null \
+    || echo "  [claude review failed — review the diff above manually]"
+
+echo "────────────────────────────────────────────────────────────────────────────"
