@@ -41,7 +41,7 @@ Then give a concise explanation (2-5 lines). If SUSPICIOUS or DANGEROUS, quote t
 Diff:
 ${CONTENT}"
 
-claude --dangerously-skip-permissions -p "$PROMPT" 2>/dev/null \
+claude -p "$PROMPT" 2>/dev/null \
     || echo "  [claude review failed — review the diff above manually]"
 
 echo "────────────────────────────────────────────────────────────────────────────"
